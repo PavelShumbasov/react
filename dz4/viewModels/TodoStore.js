@@ -1,5 +1,4 @@
 import { makeAutoObservable } from 'mobx';
-import { Todo } from '../models/TodoModel';
 
 class TodoStore {
     todos = [];
@@ -9,14 +8,15 @@ class TodoStore {
     }
 
     addTodo(title) {
-        const newTodo = new Todo(Date.now(), title);
-        this.todos.push(newTodo);
+        this.todos.push({ id: Date.now(), title, completed: false });
     }
 
     toggleTodo(id) {
-        const todo = this.todos.find(todo => todo.id === id);
-        if (todo) {
-            todo.completed = !todo.completed;
+        const todoIndex = this.todos.findIndex(todo => todo.id === id);
+        if (todoIndex !== -1) {
+            const updatedTodos = [...this.todos];
+            updatedTodos[todoIndex].completed = !updatedTodos[todoIndex].completed;
+            this.todos = updatedTodos;
         }
     }
 
