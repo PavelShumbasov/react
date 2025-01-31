@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet } from 'react-native';
 import { observer } from 'mobx-react-lite';
 import store from './viewModels/TodoStore';
 
 const App = observer(() => {
     const [inputValue, setInputValue] = React.useState('');
+
+    useEffect(() => {
+        store.loadTodosFromAsyncStorage(); // Загружаем задачи при запуске
+    }, []);
 
     const handleAddTodo = () => {
         if (inputValue.trim()) {
