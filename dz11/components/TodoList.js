@@ -3,14 +3,14 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, SafeAreaView
 import { observer } from 'mobx-react-lite';
 import store from '../viewModels/TodoStore';
 import themeStore from '../viewModels/ThemeStore';
-import languageStore from '../lang/LanguageStore';  
+import LanguageStore from '../lang/LanguageStore';  
 import { Modalize } from 'react-native-modalize';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const TodoList = observer(() => {
     const modalizeRef = useRef(null);
     const isDarkMode = themeStore.theme === 'dark';
-    const currentLanguage = languageStore.language;  
+    const currentLanguage = LanguageStore.language;  
 
     const confirmDelete = (id) => {
         Alert.alert(
@@ -36,7 +36,7 @@ const TodoList = observer(() => {
                 <Text style={styles.buttonText}>{isDarkMode ? (currentLanguage === 'ru' ? 'Светлая тема' : 'Light theme') : (currentLanguage === 'ru' ? 'Тёмная тема' : 'Dark theme')}</Text>
             </TouchableOpacity>
     
-            <TouchableOpacity onPress={() => languageStore.toggleLanguage()} style={styles.languageButton}>
+            <TouchableOpacity onPress={() => LanguageStore.toggleLanguage()} style={styles.languageButton}>
                 <Text style={styles.buttonText}>{currentLanguage === 'ru' ? 'Сменить язык' : 'Change Language'}</Text>
             </TouchableOpacity>
     
