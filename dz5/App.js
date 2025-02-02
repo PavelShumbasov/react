@@ -1,14 +1,11 @@
-import React, { useEffect } from 'react';
-import { View, Text, TextInput, Button, FlatList, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import { observer } from 'mobx-react-lite';
+import TodoList from './components/TodoList';
 import store from './viewModels/TodoStore';
 
 const App = observer(() => {
-    const [inputValue, setInputValue] = React.useState('');
-
-    useEffect(() => {
-        store.loadTodosFromAsyncStorage(); // Загружаем задачи при запуске
-    }, []);
+    const [inputValue, setInputValue] = useState('');
 
     const handleAddTodo = () => {
         if (inputValue.trim()) {
@@ -17,13 +14,10 @@ const App = observer(() => {
         }
     };
 
-    const handleToggleTodo = (id) => {
-        store.toggleTodo(id);
-    };
-
-    const handleDeleteTodo = (id) => {
-        store.deleteTodo(id);
-    };
+    useEffect(() => {
+        // Fetch todos from the server when the component mounts
+        store.fetchTodos();
+    }, []);
 
     return (
         <View style={styles.container}>
@@ -35,24 +29,7 @@ const App = observer(() => {
                 onChangeText={setInputValue}
             />
             <Button title="Add Task" onPress={handleAddTodo} />
-            <FlatList
-                data={store.todos}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                    <View style={styles.todoItem}>
-                        <Text
-                            style={[
-                                styles.todoText,
-                                item.completed && styles.completedText
-                            ]}
-                            onPress={() => handleToggleTodo(item.id)}
-                        >
-                            {item.title}
-                        </Text>
-                        <Button title="Remove" onPress={() => handleDeleteTodo(item.id)} />
-                    </View>
-                )}
-            />
+            <TodoList /> 
         </View>
     );
 });
@@ -75,21 +52,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         marginBottom: 10,
         paddingHorizontal: 10,
-    },
-    todoItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ccc',
-    },
-    todoText: {
-        fontSize: 18,
-    },
-    completedText: {
-        textDecorationLine: 'line-through',
-        color: 'gray',
     },
 });
 
