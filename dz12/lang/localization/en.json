@@ -1,0 +1,10 @@
+{
+    "welcome": "Welcome to My App",
+    "goToTodoList": "Go to Todo List",
+    "switchTheme": "Switch to {{theme}} Theme",
+    "addTask": "Add Task",
+    "myTodoList": "My Custom TODO List",
+    "addNewTask": "Add a new task",
+    "completedTasks": "View completed tasks"
+  }
+  
