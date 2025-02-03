@@ -1,55 +1,98 @@
+import { makeAutoObservable } from 'mobx';
 import Realm from 'realm';
+import api from './api';
+
 import { Todo } from '../models/TodoModel';
 
 class TodoStore {
-  constructor() {
-    this.realm = new Realm({ schema: [Todo] });
-  }
+    todos = [];
+    realm = null;
 
-  // Получение всех задач
-  getTodos() {
-    return this.realm.objects('Todo');
-  }
+    constructor() {
+        makeAutoObservable(this);
+        this.initRealm();
+        this.loadTodosFromRealm();
+        this.fetchTodos(); 
+    }
 
-  // Добавление новой задачи
-  addTodo(title) {
-    const id = this.getNextId();
-    this.realm.write(() => {
-      this.realm.create('Todo', { id, title, completed: false, createdAt: new Date() });
-    });
-  }
+    async initRealm() {
+        try {
+            this.realm = await Realm.open({
+                path: 'todo.realm', 
+                schema: [Todo], 
+                schemaVersion: 1, 
+            });
+        } catch (error) {
+            console.error('Error initializing Realm:', error);
+        }
+    }
 
-  // Обновление статуса задачи
-  toggleTodo(id) {
-    this.realm.write(() => {
-      const todo = this.realm.objectForPrimaryKey('Todo', id);
-      if (todo) {
-        todo.completed = !todo.completed;
-      }
-    });
-  }
+    loadTodosFromRealm() {
+        if (this.realm) {
+            const todos = this.realm.objects('Todo');
+            this.todos = Array.from(todos).map(todo => ({
+                id: todo.id,
+                title: todo.title,
+                completed: todo.completed,
+            }));
+        }
+    }
 
-  // Удаление задачи
-  deleteTodo(id) {
-    this.realm.write(() => {
-      const todo = this.realm.objectForPrimaryKey('Todo', id);
-      if (todo) {
-        this.realm.delete(todo);
-      }
-    });
-  }
+    async addTodo(title) {
+        try {
+            const newId = this.todos.length > 0 ? Math.max(...this.todos.map(todo => todo.id)) + 1 : 1;
+            this.realm.write(() => {
+                this.realm.create('Todo', { id: newId, title, completed: false });
+            });
+            this.loadTodosFromRealm();
+        } catch (error) {
+            console.error('Error adding todo:', error);
+        }
+    }
 
-  // Получение следующего ID
-  getNextId() {
-    const todos = this.getTodos();
-    return todos.length > 0 ? todos[todos.length - 1].id + 1 : 1;
-  }
+    async toggleTodo(id) {
+        try {
+            this.realm.write(() => {
+                const todo = this.realm.objectForPrimaryKey('Todo', id);
+                if (todo) {
+                    todo.completed = !todo.completed;
+                }
+            });
+            this.loadTodosFromRealm();
+        } catch (error) {
+            console.error('Error toggling todo:', error);
+        }
+    }
 
-  // Закрытие Realm
-  close() {
-    this.realm.close();
-  }
+    async deleteTodo(id) {
+        try {
+            this.realm.write(() => {
+                const todo = this.realm.objectForPrimaryKey('Todo', id);
+                if (todo) {
+                    this.realm.delete(todo);
+                }
+            });
+            this.loadTodosFromRealm();
+        } catch (error) {
+            console.error('Error deleting todo:', error);
+        }
+    }
+
+    saveTodosToStorage() {}
+
+    async fetchTodos() {
+        try {
+            const response = await api.get('/todos');
+            this.realm.write(() => {
+                this.realm.deleteAll(); 
+                this.realm.create('Todo', response.data, Realm.UpdateMode.Modified); 
+            });
+            this.loadTodosFromRealm();
+        } catch (error) {
+            console.error('Error fetching todos:', error);
+        }
+    }
 }
 
-const todoStore = new TodoStore();
-export default todoStore;
+const store = new TodoStore();
+export default store;

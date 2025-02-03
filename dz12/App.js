@@ -40,7 +40,6 @@ i18n.use(initReactI18next).init({
 
 const App = observer(() => {
   const [inputValue, setInputValue] = useState('');
-  const todos = store.getTodos(); 
 
   const handleAddTodo = () => {
     if (inputValue.trim()) {
@@ -52,6 +51,8 @@ const App = observer(() => {
   const isDarkMode = themeStore.theme === 'dark';
 
   useEffect(() => {
+    store.fetchTodos();
+
     const handleDeepLink = (event) => {
       const { path } = event;
       if (path === 'todos') {
@@ -66,6 +67,10 @@ const App = observer(() => {
     };
   }, []);
 
+  if (!store.realm) {
+      return <Text>Инициализация данных...</Text>;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NavigationContainer>
@@ -74,7 +79,7 @@ const App = observer(() => {
             {({ navigation }) => (
               <View style={[styles.container, isDarkMode && styles.containerDark]}>
                 <Text style={[styles.title, isDarkMode && styles.titleDark]}>
-                  {i18n.t('welcome')}
+                  {i18n.t('welcome')} 
                 </Text>
                 <Button title={i18n.t('goToTodoList')} onPress={() => navigation.navigate('TodoList')} />
                 <Button

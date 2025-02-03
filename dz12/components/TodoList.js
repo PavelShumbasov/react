@@ -1,87 +1,183 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, FlatList, StyleSheet } from 'react-native';
-import todoStore from '../viewModels/TodoStore';
+import React, { useRef } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, SafeAreaView, ScrollView } from 'react-native';
+import { observer } from 'mobx-react-lite';
+import store from '../viewModels/TodoStore';
+import themeStore from '../viewModels/ThemeStore';
+import LanguageStore from '../lang/LanguageStore';  
+import { Modalize } from 'react-native-modalize';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const TodoList = () => {
-  const [inputValue, setInputValue] = useState('');
+const TodoList = observer(() => {
+    const modalizeRef = useRef(null);
+    const isDarkMode = themeStore.theme === 'dark';
+    const currentLanguage = LanguageStore.language;  
 
-  // Получение списка задач
-  const todos = todoStore.getTodos();
+    const confirmDelete = (id) => {
+        Alert.alert(
+            currentLanguage === 'ru' ? "Подтверждение" : "Confirmation",
+            currentLanguage === 'ru' ? "Точно удалить?" : "Are you sure you want to delete?",
+            [
+                { text: currentLanguage === 'ru' ? "Нет" : "No", style: "cancel" },
+                { text: currentLanguage === 'ru' ? "Да" : "Yes", onPress: () => store.deleteTodo(id) },
+            ],
+            { cancelable: true }
+        );
+    };
 
-  // Добавление новой задачи
-  const handleAddTodo = () => {
-    if (inputValue.trim()) {
-      todoStore.addTodo(inputValue);
-      setInputValue('');
+    const openCompletedTasks = () => {
+        modalizeRef.current?.open();
+    };
+
+    const completedTodos = store.todos.filter(todo => todo.completed);
+
+    if (!store.realm) {
+        return <Text>Инициализация данных...</Text>;
     }
-  };
 
-  // Удаление задачи
-  const handleDeleteTodo = (id) => {
-    todoStore.deleteTodo(id);
-  };
-
-  // Переключение статуса задачи
-  const handleToggleTodo = (id) => {
-    todoStore.toggleTodo(id);
-  };
-
-  return (
-    <View style={styles.container}>
-      {/* Ввод новой задачи */}
-      <TextInput
-        style={styles.input}
-        placeholder="Добавить задачу"
-        value={inputValue}
-        onChangeText={setInputValue}
-      />
-      <Button title="Добавить" onPress={handleAddTodo} />
-
-      {/* Список задач */}
-      <FlatList
-        data={todos}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.todoItem}>
-            <Text style={[styles.todoText, item.completed && styles.completedText]}>
-              {item.title}
-            </Text>
-            <Button title={item.completed ? 'Отменить' : 'Завершить'} onPress={() => handleToggleTodo(item.id)} />
-            <Button title="Удалить" color="red" onPress={() => handleDeleteTodo(item.id)} />
-          </View>
-        )}
-      />
-    </View>
-  );
-};
+    return (
+        <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+            <TouchableOpacity onPress={() => themeStore.toggleTheme()} style={styles.themeButton}>
+                <Text style={styles.buttonText}>{isDarkMode ? (currentLanguage === 'ru' ? 'Светлая тема' : 'Light theme') : (currentLanguage === 'ru' ? 'Тёмная тема' : 'Dark theme')}</Text>
+            </TouchableOpacity>
+    
+            <TouchableOpacity onPress={() => LanguageStore.toggleLanguage()} style={styles.languageButton}>
+                <Text style={styles.buttonText}>{currentLanguage === 'ru' ? 'Сменить язык' : 'Change Language'}</Text>
+            </TouchableOpacity>
+    
+            <FlatList
+                data={store.todos}
+                keyExtractor={(item) => item.id.toString()}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                    <View style={[styles.todoItem, isDarkMode && styles.todoItemDark]}>
+                        <TouchableOpacity
+                            onPress={() => store.toggleTodo(item.id)}
+                            style={[styles.checkbox, item.completed && styles.checkedCheckbox]}
+                        >
+                            {item.completed && <Icon name="check" size={20} color="white" />}
+                        </TouchableOpacity>
+                        <Text style={[styles.todoText, item.completed && styles.completedText, isDarkMode && styles.todoTextDark]}>
+                            {item.title}
+                        </Text>
+                        <TouchableOpacity onPress={() => confirmDelete(item.id)} style={styles.deleteButton}>
+                            <Icon name="close" size={20} color="red" />
+                        </TouchableOpacity>
+                    </View>
+                )}
+            />
+    
+            <TouchableOpacity onPress={openCompletedTasks} style={styles.viewCompletedButton}>
+                <Text style={styles.buttonText}>{currentLanguage === 'ru' ? 'Посмотреть завершённые задачи' : 'View completed tasks'}</Text>
+            </TouchableOpacity>
+    
+            <Modalize
+                ref={modalizeRef}
+                adjustToContentHeight
+                flatListProps={{
+                    data: completedTodos,
+                    keyExtractor: (item) => item.id.toString(),
+                    keyboardShouldPersistTaps: "handled",
+                    renderItem: ({ item }) => (
+                        <View style={styles.todoItem}>
+                            <Text style={[styles.todoText, styles.completedText]}>
+                                {item.title}
+                            </Text>
+                        </View>
+                    ),
+                }}
+            />
+        </SafeAreaView>
+    );
+});
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-  },
-  todoItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  todoText: {
-    fontSize: 16,
-  },
-  completedText: {
-    textDecorationLine: 'line-through',
-    color: 'gray',
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+        paddingTop: 10,
+    },
+    containerDark: {
+        backgroundColor: '#121212',
+    },
+    scrollContainer: {
+        flexGrow: 1,
+    },
+    todoItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ccc',
+    },
+    todoItemDark: {
+        borderBottomColor: '#444',
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderWidth: 2,
+        borderColor: '#000',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 10,
+    },
+    checkmark: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    todoText: {
+        fontFamily: 'SueEllenFrancisco-Regular',
+        fontSize: 18,
+        flex: 1,
+        color: '#000',
+    },
+    todoTextDark: {
+        color: '#fff',
+    },
+    completedText: {
+        textDecorationLine: 'line-through',
+        color: 'gray',
+    },
+    deleteButton: {
+        marginLeft: 10,
+    },
+    deleteText: {
+        fontSize: 18,
+        color: 'red',
+    },
+    checkedCheckbox: {
+        backgroundColor: '#4CAF50',
+        borderColor: '#4CAF50',
+    },
+    viewCompletedButton: {
+        marginVertical: 10,
+        backgroundColor: '#007BFF',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginHorizontal: 20,
+    },
+    themeButton: {
+        backgroundColor: '#007BFF',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginBottom: 10,
+        marginHorizontal: 20,
+    },
+    languageButton: {
+        backgroundColor: '#4CAF50',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginBottom: 10,
+        marginHorizontal: 20,
+    },
+    buttonText: {
+        fontFamily: 'SueEllenFrancisco-Regular',
+        color: 'white',
+        fontWeight: 'bold',
+    },
 });
 
 export default TodoList;
